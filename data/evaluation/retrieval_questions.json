@@ -1,0 +1,22 @@
+[
+  {
+    "question": "What must be completed before releasing an application?",
+    "expected_source": "deployment-guide.md"
+  },
+  {
+    "question": "What checks are needed before a software release?",
+    "expected_source": "deployment-guide.md"
+  },
+  {
+    "question": "What does severity 1 mean?",
+    "expected_source": "incident-response.md"
+  },
+  {
+    "question": "How do employees request application access?",
+    "expected_source": "access-policy.md"
+  },
+  {
+    "question": "What is the company holiday policy?",
+    "expected_source": null
+  }
+]
