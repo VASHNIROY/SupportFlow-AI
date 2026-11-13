@@ -15,6 +15,27 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi import HTTPException
 from sqlalchemy import text
 
+from fastapi import Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from app.dependencies import get_db
+from app.schemas import TicketCreateRequest, TicketResponse
+from app.services.ticket_service import TicketService
+
+from fastapi import Depends, HTTPException, status
+from app.repositories.ticket_repository import TicketRepository
+
+from app.schemas import (
+    TicketResponse,
+    TicketStatusUpdateRequest,
+)
+
+from app.schemas import (
+    TicketApprovalRequest,
+    TicketDraftRequest,
+)
+from fastapi import Depends, HTTPException, Query, status
+
 from app.database import engine
 import ollama
 
@@ -224,3 +245,186 @@ def readiness_check() -> dict:
                 "error": str(error),
             },
         ) from error
+
+@app.get(
+    "/tickets/{ticket_id}",
+    response_model=TicketResponse,
+)
+def get_ticket(
+    ticket_id: int,
+    session: Session = Depends(get_db),
+) -> TicketResponse:
+    ticket_service = TicketService(
+        repository=TicketRepository(),
+    )
+
+    ticket = ticket_service.get_ticket(
+        session,
+        ticket_id,
+    )
+
+    if ticket is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Ticket not found.",
+        )
+
+    return ticket
+
+
+@app.patch(
+    "/tickets/{ticket_id}/status",
+    response_model=TicketResponse,
+)
+def update_ticket_status(
+    ticket_id: int,
+    payload: TicketStatusUpdateRequest,
+    session: Session = Depends(get_db),
+) -> TicketResponse:
+    ticket_service = TicketService()
+
+    try:
+        ticket = ticket_service.update_ticket_status(
+            session,
+            ticket_id=ticket_id,
+            new_status=payload.status,
+            performed_by=payload.performed_by,
+        )
+
+        session.commit()
+        session.refresh(ticket)
+
+        return ticket
+
+    except LookupError as error:
+        session.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(error),
+        ) from error
+
+    except ValueError as error:
+        session.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+    except Exception as error:
+        session.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to update ticket status.",
+        ) from error
+
+
+@app.post(
+    "/tickets/draft",
+    response_model=TicketResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_ticket_draft(
+    payload: TicketDraftRequest,
+    session: Session = Depends(get_db),
+) -> TicketResponse:
+    ticket_service = TicketService()
+
+    try:
+        ticket = ticket_service.create_ticket_draft(
+            session,
+            title=payload.title,
+            description=payload.description,
+            category=payload.category,
+            priority=payload.priority,
+            created_by=payload.created_by,
+        )
+
+        session.commit()
+        session.refresh(ticket)
+
+        return ticket
+
+    except Exception as error:
+        session.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to create ticket draft.",
+        ) from error
+
+
+@app.post(
+    "/tickets/{ticket_id}/approve",
+    response_model=TicketResponse,
+)
+def approve_ticket(
+    ticket_id: int,
+    payload: TicketApprovalRequest,
+    session: Session = Depends(get_db),
+) -> TicketResponse:
+    ticket_service = TicketService()
+
+    try:
+        ticket = ticket_service.approve_ticket(
+            session,
+            ticket_id=ticket_id,
+            approved_by=payload.approved_by,
+        )
+
+        session.commit()
+        session.refresh(ticket)
+
+        return ticket
+
+    except LookupError as error:
+        session.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(error),
+        ) from error
+
+    except ValueError as error:
+        session.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(error),
+        ) from error
+
+    except Exception as error:
+        session.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to approve ticket.",
+        ) from error
+
+@app.get(
+    "/tickets",
+    response_model=list[TicketResponse],
+)
+def list_tickets(
+    ticket_status: str | None = Query(
+        default=None,
+        alias="status",
+        pattern=(
+            "^(pending_approval|created|in_progress|"
+            "resolved|closed|cancelled)$"
+        ),
+    ),
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    session: Session = Depends(get_db),
+) -> list[TicketResponse]:
+    ticket_service = TicketService()
+
+    return ticket_service.list_tickets(
+        session,
+        status=ticket_status,
+        limit=limit,
+        offset=offset,
+    )
