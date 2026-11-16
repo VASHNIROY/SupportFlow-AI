@@ -215,3 +215,14 @@ class TicketService:
             limit=limit,
             offset=offset,
         )
+
+
+    def list_ticket_events(
+        self,
+        session: Session,
+        ticket_id: int,
+    ) -> list[TicketEvent]:
+        return self.repository.list_events(
+            session,
+            ticket_id,
+        )
