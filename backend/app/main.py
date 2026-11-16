@@ -24,6 +24,7 @@ from app.services.ticket_service import TicketService
 
 from fastapi import Depends, HTTPException, status
 from app.repositories.ticket_repository import TicketRepository
+from app.schemas import TicketEventResponse
 
 from app.schemas import (
     TicketResponse,
@@ -427,4 +428,31 @@ def list_tickets(
         status=ticket_status,
         limit=limit,
         offset=offset,
+    )
+
+
+@app.get(
+    "/tickets/{ticket_id}/events",
+    response_model=list[TicketEventResponse],
+)
+def list_ticket_events(
+    ticket_id: int,
+    session: Session = Depends(get_db),
+) -> list[TicketEventResponse]:
+    ticket_service = TicketService()
+
+    ticket = ticket_service.get_ticket(
+        session,
+        ticket_id,
+    )
+
+    if ticket is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Ticket not found.",
+        )
+
+    return ticket_service.list_ticket_events(
+        session,
+        ticket_id,
     )
