@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Literal
 from pydantic import ConfigDict
+from datetime import datetime
 
 class AskRequest(BaseModel):
     question: str = Field(
@@ -129,3 +130,16 @@ class TicketApprovalRequest(BaseModel):
         min_length=3,
         max_length=255,
     )
+
+
+class TicketEventResponse(BaseModel):
+    id: int
+    ticket_id: int
+    event_type: str
+    old_status: str | None
+    new_status: str | None
+    performed_by: str
+    details: dict | None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
