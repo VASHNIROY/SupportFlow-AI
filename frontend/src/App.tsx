@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { askQuestion, type AskResponse } from "./api";
 import ReactMarkdown from "react-markdown";
+import TicketPanel from "./components/TicketPanel";
 import remarkGfm from "remark-gfm";
 import "./App.css";
 
@@ -88,6 +89,7 @@ function App() {
                 ))}
               </ul>
             )}
+            <TicketPanel />
           </section>
         )}
       </section>
