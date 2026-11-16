@@ -65,3 +65,20 @@ class TicketRepository:
         )
 
         return list(session.scalars(statement).all())
+
+    
+    def list_events(
+        self,
+        session: Session,
+        ticket_id: int,
+    ) -> list[TicketEvent]:
+        statement = (
+            select(TicketEvent)
+            .where(TicketEvent.ticket_id == ticket_id)
+            .order_by(
+                TicketEvent.created_at.asc(),
+                TicketEvent.id.asc(),
+            )
+        )
+
+        return list(session.scalars(statement).all())
