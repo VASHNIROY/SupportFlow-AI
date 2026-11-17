@@ -25,6 +25,14 @@ from app.services.ticket_service import TicketService
 from fastapi import Depends, HTTPException, status
 from app.repositories.ticket_repository import TicketRepository
 from app.schemas import TicketEventResponse
+from datetime import datetime, timedelta, timezone
+from app.auth.dependencies import get_current_user
+from app.auth.models import AuthenticatedUser
+
+import jwt
+from fastapi.security import OAuth2PasswordRequestForm
+
+from app.auth.dependencies import JWT_ALGORITHM, JWT_SECRET
 
 from app.schemas import (
     TicketResponse,
@@ -39,6 +47,19 @@ from fastapi import Depends, HTTPException, Query, status
 
 from app.database import engine
 import ollama
+
+DEMO_AUTH_USERS = {
+    "demo-user": {
+        "password": "demo-password",
+        "email": "demo@example.com",
+        "roles": ["requester"],
+    },
+    "manager-user": {
+        "password": "manager-password",
+        "email": "manager@example.com",
+        "roles": ["requester", "approver"],
+    },
+}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -62,7 +83,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5174",
+        "http://localhost:5174","http://localhost:5173",
         "http://127.0.0.1:5174",
     ],
     allow_credentials=True,
@@ -283,13 +304,14 @@ def update_ticket_status(
     session: Session = Depends(get_db),
 ) -> TicketResponse:
     ticket_service = TicketService()
+    current_user: AuthenticatedUser = Depends(get_current_user)
 
     try:
         ticket = ticket_service.update_ticket_status(
             session,
             ticket_id=ticket_id,
             new_status=payload.status,
-            performed_by=payload.performed_by,
+            performed_by=current_user.user_id,
         )
 
         session.commit()
@@ -330,6 +352,7 @@ def update_ticket_status(
 def create_ticket_draft(
     payload: TicketDraftRequest,
     session: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> TicketResponse:
     ticket_service = TicketService()
 
@@ -340,7 +363,7 @@ def create_ticket_draft(
             description=payload.description,
             category=payload.category,
             priority=payload.priority,
-            created_by=payload.created_by,
+            created_by=current_user.user_id,
         )
 
         session.commit()
@@ -356,23 +379,28 @@ def create_ticket_draft(
             detail="Unable to create ticket draft.",
         ) from error
 
-
 @app.post(
     "/tickets/{ticket_id}/approve",
     response_model=TicketResponse,
 )
 def approve_ticket(
     ticket_id: int,
-    payload: TicketApprovalRequest,
     session: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
 ) -> TicketResponse:
+    if "approver" not in current_user.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Approver permission is required.",
+        )
+
     ticket_service = TicketService()
 
     try:
         ticket = ticket_service.approve_ticket(
             session,
             ticket_id=ticket_id,
-            approved_by=payload.approved_by,
+            approved_by=current_user.user_id,
         )
 
         session.commit()
@@ -396,14 +424,7 @@ def approve_ticket(
             detail=str(error),
         ) from error
 
-    except Exception as error:
-        session.rollback()
-
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Unable to approve ticket.",
-        ) from error
-
+    
 @app.get(
     "/tickets",
     response_model=list[TicketResponse],
@@ -456,3 +477,37 @@ def list_ticket_events(
         session,
         ticket_id,
     )
+
+
+@app.post("/auth/token")
+def issue_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+) -> dict[str, str]:
+    user = DEMO_AUTH_USERS.get(form_data.username)
+
+    if user is None or user["password"] != form_data.password:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password.",
+            headers={
+                "WWW-Authenticate": "Bearer",
+            },
+        )
+
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+
+    token = jwt.encode(
+        {
+            "sub": form_data.username,
+            "email": user["email"],
+            "roles": user["roles"],
+            "exp": expires_at,
+        },
+        JWT_SECRET,
+        algorithm=JWT_ALGORITHM,
+    )
+
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+    }
