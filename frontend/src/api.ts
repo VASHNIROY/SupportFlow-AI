@@ -10,7 +10,6 @@ export interface AskResponse {
   sources: SourceCitation[];
 }
 
-
 export type TicketStatus =
   | "pending_approval"
   | "created"
@@ -38,7 +37,6 @@ export interface TicketDraftRequest {
   description: string;
   category: string;
   priority: TicketPriority;
-  created_by: string;
 }
 
 export interface TicketApprovalRequest {
@@ -58,9 +56,59 @@ export interface TicketEvent {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-export async function askQuestion(
-  question: string,
-): Promise<AskResponse> {
+const ACCESS_TOKEN_KEY = "supportflow_access_token";
+
+async function handleResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => null);
+
+    throw new Error(
+      errorBody?.detail ?? `Request failed with status ${response.status}`,
+    );
+  }
+
+  return response.json() as Promise<T>;
+}
+
+interface TokenResponse {
+  access_token: string;
+  token_type: string;
+}
+
+export async function login(username: string, password: string): Promise<void> {
+  const formData = new URLSearchParams();
+
+  formData.set("username", username);
+  formData.set("password", password);
+
+  const response = await fetch(`${API_BASE_URL}/auth/token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error("Invalid username or password.");
+  }
+
+  const data = (await response.json()) as TokenResponse;
+
+  sessionStorage.setItem(ACCESS_TOKEN_KEY, data.access_token);
+}
+
+function getAuthHeaders(): HeadersInit {
+  const token = sessionStorage.getItem(ACCESS_TOKEN_KEY);
+
+  return token
+    ? {
+        Authorization: `Bearer ${token}`,
+      }
+    : {};
+}
+
+export async function askQuestion(question: string): Promise<AskResponse> {
   const response = await fetch(`${API_BASE_URL}/ask`, {
     method: "POST",
     headers: {
@@ -79,7 +127,6 @@ export async function askQuestion(
   return response.json() as Promise<AskResponse>;
 }
 
-
 export async function createTicketDraft(
   payload: TicketDraftRequest,
 ): Promise<Ticket> {
@@ -87,6 +134,7 @@ export async function createTicketDraft(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...getAuthHeaders(),
     },
     body: JSON.stringify(payload),
   });
@@ -98,29 +146,16 @@ export async function createTicketDraft(
   return response.json() as Promise<Ticket>;
 }
 
-
-export async function approveTicket(
-  ticketId: number,
-  payload: TicketApprovalRequest,
-): Promise<Ticket> {
-  const response = await fetch(
-    `${API_BASE_URL}/tickets/${ticketId}/approve`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
+export async function approveTicket(ticketId: number): Promise<Ticket> {
+  const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/approve`, {
+    method: "POST",
+    headers: {
+      ...getAuthHeaders(),
     },
-  );
+  });
 
-  if (!response.ok) {
-    throw new Error("Unable to approve ticket.");
-  }
-
-  return response.json() as Promise<Ticket>;
+  return handleResponse<Ticket>(response);
 }
-
 
 export async function listTickets(): Promise<Ticket[]> {
   const response = await fetch(`${API_BASE_URL}/tickets`);
@@ -132,13 +167,12 @@ export async function listTickets(): Promise<Ticket[]> {
   return response.json() as Promise<Ticket[]>;
 }
 
-
 export async function getTicketEvents(
   ticketId: number,
 ): Promise<TicketEvent[]> {
-  const response = await fetch(
-    `${API_BASE_URL}/tickets/${ticketId}/events`,
-  );
+  const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}/events`, {
+    headers: getAuthHeaders(),
+  });
 
   if (!response.ok) {
     throw new Error("Unable to load ticket history.");
