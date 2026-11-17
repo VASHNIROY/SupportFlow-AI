@@ -41,11 +41,7 @@ export default function TicketPanel() {
     setIsSubmitting(true);
 
     try {
-      const createdTicket = await createTicketDraft({
-        ...form,
-        created_by: "demo-user",
-      });
-
+      const createdTicket = await createTicketDraft(form);
       setTicket(createdTicket);
       await loadTicketEvents(createdTicket.id);
       setForm(initialForm);
@@ -65,9 +61,7 @@ export default function TicketPanel() {
     setIsApproving(true);
 
     try {
-      const approvedTicket = await approveTicket(ticket.id, {
-        approved_by: "manager-user",
-      });
+      const approvedTicket = await approveTicket(ticket.id);
 
       setTicket(approvedTicket);
       await loadTicketEvents(approvedTicket.id);
