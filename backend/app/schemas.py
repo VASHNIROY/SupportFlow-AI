@@ -91,38 +91,16 @@ class TicketStatusUpdateRequest(BaseModel):
         "cancelled",
     ]
 
-    performed_by: str = Field(
-        min_length=3,
-        max_length=255,
-    )
-
 class TicketDraftRequest(BaseModel):
-    title: str = Field(
-        min_length=5,
-        max_length=200,
-    )
-
-    description: str = Field(
-        min_length=10,
-        max_length=5000,
-    )
-
-    category: str = Field(
-        min_length=2,
-        max_length=50,
-    )
-
+    title: str = Field(min_length=5, max_length=200)
+    description: str = Field(min_length=10, max_length=5000)
+    category: str = Field(min_length=2, max_length=50)
     priority: Literal[
         "low",
         "medium",
         "high",
         "urgent",
     ] = "medium"
-
-    created_by: str = Field(
-        min_length=3,
-        max_length=255,
-    )
 
 
 class TicketApprovalRequest(BaseModel):
