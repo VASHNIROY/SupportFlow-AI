@@ -98,6 +98,10 @@ export async function login(username: string, password: string): Promise<void> {
   sessionStorage.setItem(ACCESS_TOKEN_KEY, data.access_token);
 }
 
+export function logout(): void {
+  sessionStorage.removeItem("supportflow_access_token");
+}
+
 function getAuthHeaders(): HeadersInit {
   const token = sessionStorage.getItem(ACCESS_TOKEN_KEY);
 
