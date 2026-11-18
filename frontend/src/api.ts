@@ -108,6 +108,10 @@ function getAuthHeaders(): HeadersInit {
     : {};
 }
 
+export function isAuthenticated(): boolean {
+  return Boolean(sessionStorage.getItem("supportflow_access_token"));
+}
+
 export async function askQuestion(question: string): Promise<AskResponse> {
   const response = await fetch(`${API_BASE_URL}/ask`, {
     method: "POST",
