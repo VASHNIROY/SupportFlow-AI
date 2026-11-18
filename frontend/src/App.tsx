@@ -4,10 +4,13 @@ import ReactMarkdown from "react-markdown";
 import TicketPanel from "./components/TicketPanel";
 import remarkGfm from "remark-gfm";
 import "./App.css";
+import LoginPanel from "./components/LoginPanel";
+import { isAuthenticated } from "./api";
 
 function App() {
   const [question, setQuestion] = useState("");
   const [result, setResult] = useState<AskResponse | null>(null);
+  const [authenticated, setAuthenticated] = useState(isAuthenticated());
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -36,6 +39,13 @@ function App() {
     } finally {
       setIsLoading(false);
     }
+  }
+  if (!authenticated) {
+    return (
+      <main className="app-shell">
+        <LoginPanel onLoginSuccess={() => setAuthenticated(true)} />
+      </main>
+    );
   }
 
   return (
