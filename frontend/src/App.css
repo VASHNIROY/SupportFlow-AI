@@ -320,6 +320,20 @@ button:disabled {
   color: #667085;
 }
 
+.logout-button {
+  margin-left: auto;
+  border: 1px solid #d7ddea;
+  border-radius: 10px;
+  padding: 8px 14px;
+  background: #ffffff;
+  color: #374151;
+  cursor: pointer;
+}
+
+.logout-button:hover {
+  background: #f3f6fb;
+}
+
 @media (max-width: 700px) {
   .ticket-panel {
     padding: 22px;
