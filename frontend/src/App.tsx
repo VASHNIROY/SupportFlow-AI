@@ -5,7 +5,8 @@ import TicketPanel from "./components/TicketPanel";
 import remarkGfm from "remark-gfm";
 import "./App.css";
 import LoginPanel from "./components/LoginPanel";
-import { isAuthenticated } from "./api";
+import { isAuthenticated, logout } from "./api";
+
 
 function App() {
   const [question, setQuestion] = useState("");
@@ -48,9 +49,18 @@ function App() {
     );
   }
 
+  
+  function handleLogout() {
+    logout();
+    setAuthenticated(false);
+  }
+
   return (
     <main className="app">
       <section className="chat-card">
+        <button type="button" className="logout-button" onClick={handleLogout}>
+          Sign out
+        </button>
         <p className="eyebrow">INTERNAL KNOWLEDGE ASSISTANT</p>
 
         <h1>SupportFlow AI</h1>
