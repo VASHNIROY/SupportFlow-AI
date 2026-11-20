@@ -28,6 +28,7 @@ psycopg-binary==3.3.8
 pycparser==3.12
 pydantic==2.14.3
 pydantic_core==2.50.4
+pydantic-settings==2.16.3
 Pygments==2.21.0
 PyJWT==2.15.1
 pypdf==7.0.1
