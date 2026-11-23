@@ -1,13 +1,16 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from app.config import settings
+
 
 DATABASE_URL = (
     "postgresql+psycopg://supportflow:"
     "supportflow_dev_password@127.0.0.1:5433/supportflow"
 )
 
+
 engine = create_engine(
-    DATABASE_URL,
+    settings.database_url,
     pool_pre_ping=True,
 )
 
