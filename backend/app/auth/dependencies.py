@@ -8,13 +8,10 @@ from jwt.exceptions import PyJWTError
 
 from app.auth.models import AuthenticatedUser
 
+from app.config import settings
 
-JWT_SECRET = os.getenv(
-    "JWT_SECRET",
-    "local-development-secret-change-me",
-)
-
-JWT_ALGORITHM = "HS256"
+JWT_SECRET = settings.jwt_secret
+JWT_ALGORITHM = settings.jwt_algorithm
 
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="/auth/token",
