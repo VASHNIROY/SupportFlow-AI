@@ -59,6 +59,13 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const ACCESS_TOKEN_KEY = "supportflow_access_token";
 
 async function handleResponse<T>(response: Response): Promise<T> {
+  if (response.status === 401) {
+    logout();
+    window.dispatchEvent(new Event("auth-expired"));
+
+    throw new Error("Your session has expired. Please sign in again.");
+  }
+
   if (!response.ok) {
     const errorBody = await response.json().catch(() => null);
 
@@ -166,13 +173,14 @@ export async function approveTicket(ticketId: number): Promise<Ticket> {
 }
 
 export async function listTickets(): Promise<Ticket[]> {
-  const response = await fetch(`${API_BASE_URL}/tickets`);
+  const response = await fetch(`${API_BASE_URL}/tickets`, {
+    method: "GET",
+    headers: {
+      ...getAuthHeaders(),
+    },
+  });
 
-  if (!response.ok) {
-    throw new Error("Unable to load tickets.");
-  }
-
-  return response.json() as Promise<Ticket[]>;
+  return handleResponse<Ticket[]>(response);
 }
 
 export async function getTicketEvents(
