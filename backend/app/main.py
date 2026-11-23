@@ -28,6 +28,7 @@ from app.schemas import TicketEventResponse
 from datetime import datetime, timedelta, timezone
 from app.auth.dependencies import get_current_user
 from app.auth.models import AuthenticatedUser
+from app.config import settings
 
 import jwt
 from fastapi.security import OAuth2PasswordRequestForm
@@ -82,10 +83,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5174","http://localhost:5173",
-        "http://127.0.0.1:5174",
-    ],
+    allow_origins=settings.cors_origin_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -494,7 +492,7 @@ def issue_token(
             },
         )
 
-    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expire_minutes)
 
     token = jwt.encode(
         {
